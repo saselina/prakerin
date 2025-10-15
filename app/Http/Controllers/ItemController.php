@@ -11,31 +11,77 @@ use Illuminate\Http\Request;
 class ItemController extends Controller
 {
     // Menampilkan semua item
-    public function index(Request $request)
+public function index(Request $request)
 {
     $buildings = Building::all();
     $rooms = Room::all();
+    $categories = Category::all();
 
     $query = Item::with(['room.building', 'category']);
 
-    // Filter berdasarkan gedung
+    // 🔍 Pencarian
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhereHas('category', fn($q) => $q->where('name', 'like', "%{$search}%"))
+              ->orWhereHas('room', fn($q) => $q->where('name', 'like', "%{$search}%"))
+              ->orWhereHas('room.building', fn($q) => $q->where('name', 'like', "%{$search}%"));
+        });
+    }
+
+    // 🏢 Filter gedung
     if ($request->building_id) {
-        $query->whereHas('room.building', function($q) use ($request) {
+        $query->whereHas('room.building', function ($q) use ($request) {
             $q->where('id', $request->building_id);
         });
 
-        // Ambil hanya ruangan dari gedung terpilih
         $rooms = Room::where('building_id', $request->building_id)->get();
     }
 
-    // Filter berdasarkan ruangan
+    // 🚪 Filter ruangan
     if ($request->room_id) {
         $query->where('room_id', $request->room_id);
     }
 
+    // 🏷️ Filter kategori
+    if ($request->category_id) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    // ↕️ Sort
+    if ($sort = $request->input('sort')) {
+        switch ($sort) {
+            case 'building':
+                $query->orderByRaw('(SELECT name FROM buildings
+                    WHERE buildings.id = (
+                        SELECT building_id FROM rooms WHERE rooms.id = items.room_id LIMIT 1
+                    )
+                ) ASC');
+                break;
+
+            case 'room':
+                $query->orderByRaw('(SELECT name FROM rooms WHERE rooms.id = items.room_id LIMIT 1) ASC');
+                break;
+
+            case 'category':
+                $query->orderByRaw('(SELECT name FROM categories WHERE categories.id = items.category_id LIMIT 1) ASC');
+                break;
+
+            case 'quantity':
+                $query->orderBy('quantity', 'asc');
+                break;
+
+            default:
+                $query->latest();
+                break;
+        }
+    } else {
+        $query->latest();
+    }
+
     $items = $query->get();
 
-    return view('items.index', compact('items', 'buildings', 'rooms'));
+    return view('items.index', compact('items', 'buildings', 'rooms', 'categories'));
 }
 
 
