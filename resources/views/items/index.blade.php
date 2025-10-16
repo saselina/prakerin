@@ -22,56 +22,235 @@
                 </div>
             @endif
 
-            {{-- 🔎 Form Search & Sort --}}
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-    <form method="GET" action="{{ route('items.index') }}" class="flex flex-wrap items-center gap-3 mb-4">
+<div class="mb-6">
+    <form id="filterForm" method="GET" action="{{ route('items.index') }}"
+          class="flex flex-wrap justify-center items-center bg-white p-4 rounded-xl shadow-md border border-gray-200 max-w-6xl mx-auto gap-5">
 
-    <input type="text" name="search" value="{{ request('search') }}"
-           placeholder="Cari barang..."
-           class="border rounded px-3 py-2 text-sm w-60">
+        {{-- 🔍 Pencarian --}}
+        <div class="flex items-center flex-grow max-w-lg -ml-6"> {{-- 🔹 digeser sedikit ke kiri --}}
+            <input type="text" name="search" value="{{ request('search') }}"
+                   placeholder="Cari barang..."
+                   class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition shadow-sm">
+        </div>
 
-    <select name="building_id" class="border rounded px-3 py-2 text-sm">
-        <option value="">Gedung</option>
-        @foreach ($buildings as $building)
-            <option value="{{ $building->id }}" {{ request('building_id') == $building->id ? 'selected' : '' }}>
-                {{ $building->name }}
-            </option>
-        @endforeach
-    </select>
+        {{-- 🏢 Gedung --}}
+        <select id="buildingSelect" name="building_id"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-44 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+            <option value="">Gedung</option>
+            @foreach ($buildings as $building)
+                <option value="{{ $building->id }}" {{ request('building_id') == $building->id ? 'selected' : '' }}>
+                    {{ $building->name }}
+                </option>
+            @endforeach
+        </select>
 
-    <select name="room_id" class="border rounded px-3 py-2 text-sm">
-        <option value="">Ruangan</option>
-        @foreach ($rooms as $room)
-            <option value="{{ $room->id }}" {{ request('room_id') == $room->id ? 'selected' : '' }}>
-                {{ $room->name }}
-            </option>
-        @endforeach
-    </select>
+        {{-- 🚪 Ruangan --}}
+        <select id="roomSelect" name="room_id"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-44 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+            <option value="">Ruangan</option>
+            @if (request('building_id'))
+                @foreach ($rooms as $room)
+                    <option value="{{ $room->id }}" {{ request('room_id') == $room->id ? 'selected' : '' }}>
+                        {{ $room->name }}
+                    </option>
+                @endforeach
+            @endif
+        </select>
 
-    <select name="category_id" class="border rounded px-3 py-2 text-sm">
-        <option value="">Kategori</option>
-        @foreach ($categories as $category)
-            <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                {{ $category->name }}
-            </option>
-        @endforeach
-    </select>
+        {{-- 🏷️ Kategori --}}
+        <select name="category_id"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-44 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
+            <option value="">Kategori</option>
+            @foreach ($categories as $category)
+                <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                    {{ $category->name }}
+                </option>
+            @endforeach
+        </select>
 
-    {{-- <select name="sort" class="border rounded px-3 py-2 text-sm">
-        <option value="">Urutkan berdasarkan...</option>
-        <option value="building" {{ request('sort') == 'building' ? 'selected' : '' }}>Gedung</option>
-        <option value="category" {{ request('sort') == 'category' ? 'selected' : '' }}>Kategori</option>
-        <option value="quantity" {{ request('sort') == 'quantity' ? 'selected' : '' }}>Jumlah</option>
-    </select> --}}
-
-    <button type="submit" class="bg-blue-500 text-gray-600 px-4 py-2 rounded hover:bg-blue-600">
-        Terapkan
-    </button>
-
-    <a href="{{ route('items.index') }}" class="ml-2 text-gray-600 hover:underline">Reset</a>
-</form>
+        {{-- 🔄 Reset --}}
+        <a href="{{ route('items.index') }}"
+           class="text-gray-600 hover:text-gray-800 text-sm underline">
+            Reset
+        </a>
+    </form>
 </div>
 
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('filterForm');
+    const buildingSelect = document.getElementById('buildingSelect');
+    const roomSelect = document.getElementById('roomSelect');
+    const searchInput = form.querySelector('input[name="search"]');
+
+    // 🏢 Saat gedung berubah
+    buildingSelect.addEventListener('change', function () {
+        const buildingId = this.value;
+        roomSelect.innerHTML = '<option value="">Memuat...</option>';
+
+        if (buildingId) {
+            fetch('/get-rooms/' + buildingId)
+                .then(response => response.json())
+                .then(rooms => {
+                    let options = '<option value="">Ruangan</option>';
+                    rooms.forEach(room => {
+                        options += `<option value="${room.id}">${room.name}</option>`;
+                    });
+                    roomSelect.innerHTML = options;
+
+                    // 🔄 Langsung kirim form
+                    form.submit();
+                })
+                .catch(() => {
+                    roomSelect.innerHTML = '<option value="">Gagal memuat ruangan</option>';
+                });
+        } else {
+            // ❌ Kalau gedung dikosongkan, ruangan ikut dikosongkan
+            roomSelect.innerHTML = '<option value="">Ruangan</option>';
+            form.submit();
+        }
+    });
+
+    // 🚪 Saat ruangan atau kategori berubah → langsung submit
+    form.querySelectorAll('select[name="room_id"], select[name="category_id"]').forEach(select => {
+        select.addEventListener('change', () => form.submit());
+    });
+
+    // 🔍 Search otomatis
+    let typingTimer;
+    if (searchInput) {
+        searchInput.addEventListener('keyup', () => {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => form.submit(), 800);
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('filterForm');
+
+    // 🔄 Submit otomatis ketika dropdown berubah
+    form.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', () => form.submit());
+    });
+
+    // 🔍 Search otomatis setelah 0.8 detik berhenti mengetik
+    const searchInput = form.querySelector('input[name="search"]');
+    let typingTimer;
+    if (searchInput) {
+        searchInput.addEventListener('keyup', () => {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => form.submit(), 800); // 0.8 detik setelah selesai ngetik
+        });
+    }
+
+    // 🚪 Update ruangan sesuai gedung (AJAX seperti sebelumnya)
+    const buildingSelect = document.getElementById('buildingSelect');
+    const roomSelect = document.getElementById('roomSelect');
+    if (buildingSelect) {
+        buildingSelect.addEventListener('change', function () {
+            const buildingId = this.value;
+            roomSelect.innerHTML = '<option value="">Memuat...</option>';
+
+            if (buildingId) {
+                fetch('/get-rooms/' + buildingId)
+                    .then(response => response.json())
+                    .then(rooms => {
+                        let options = '<option value="">Ruangan</option>';
+                        rooms.forEach(room => {
+                            options += `<option value="${room.id}">${room.name}</option>`;
+                        });
+                        roomSelect.innerHTML = options;
+                    })
+                    .catch(() => {
+                        roomSelect.innerHTML = '<option value="">Gagal memuat ruangan</option>';
+                    });
+            } else {
+                roomSelect.innerHTML = '<option value="">Ruangan</option>';
+            }
+
+            // 🟢 langsung kirim form juga
+            form.submit();
+        });
+    }
+});
+</script>
+
+
+
+{{-- 🧠 Script Dinamis Ruangan Berdasarkan Gedung --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buildingSelect = document.getElementById('buildingSelect');
+    const roomSelect = document.getElementById('roomSelect');
+
+    if (buildingSelect) {
+        buildingSelect.addEventListener('change', function () {
+            const buildingId = this.value;
+            roomSelect.innerHTML = '<option value="">Memuat...</option>';
+
+            if (buildingId) {
+                fetch('/get-rooms/' + buildingId)
+                    .then(response => response.json())
+                    .then(rooms => {
+                        let options = '<option value="">Ruangan</option>';
+                        rooms.forEach(room => {
+                            options += `<option value="${room.id}">${room.name}</option>`;
+                        });
+                        roomSelect.innerHTML = options;
+                    })
+                    .catch(() => {
+                        roomSelect.innerHTML = '<option value="">Gagal memuat ruangan</option>';
+                    });
+            } else {
+                roomSelect.innerHTML = '<option value="">Ruangan</option>';
+            }
+        });
+    }
+});
+</script>
+
+<style>
+    /* Kunci ukuran area sortir */
+    form.flex {
+        min-height: 48px; /* biar gak menyusut */
+        align-items: center;
+    }
+
+    /* Pastikan semua input dan select punya ukuran konsisten */
+    input[type="text"],
+    select {
+        min-width: 150px;
+        height: 38px;
+        box-sizing: border-box;
+    }
+
+    /* Tombol biar sejajar sempurna */
+    button[type="submit"] {
+        height: 38px;
+        line-height: 1;
+    }
+
+    /* Kunci tinggi tabel agar border tidak "melompat" */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    tbody {
+        min-height: 300px; /* kunci tinggi tabel minimal */
+        display: table-row-group;
+    }
+
+    Supaya kalau tabel kosong, tetap tinggi dan border tetap
+    td[colspan] {
+        height: 200px;
+    }
+</style>
 
             {{-- ✅ Tombol tambah --}}
             <div class="mb-4">
