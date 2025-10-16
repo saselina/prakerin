@@ -10,7 +10,7 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * Halaman tujuan setelah login.
      */
-    public const HOME = '/dashboard'; // bisa diganti ke '/items' kalau mau
+    public const HOME = '/items'; // bisa diganti ke '/items' kalau mau
 
     /**
      * Definisikan route untuk aplikasi.

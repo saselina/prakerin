@@ -9,10 +9,6 @@ Route::get('/', function () {
     return redirect('/items');
 });
 
-// Dashboard bawaan Breeze (boleh dihapus kalau nggak dipakai)
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 // Semua route di bawah ini hanya bisa diakses setelah login
 Route::middleware(['auth'])->group(function () {

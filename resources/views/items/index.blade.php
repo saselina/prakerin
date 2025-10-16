@@ -8,19 +8,13 @@
     <div class="py-8 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto bg-white text-gray-900 p-6 rounded-lg shadow">
 
-
-            {{-- ✅ Notifikasi sukses --}}
-            @if (session('success'))
-                <div
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 3000)"
-                    class="mb-4 bg-green-500 text-white px-4 py-2 rounded"
-                >
-                    ✅ <strong>{{ session('success') }}</strong>
+    {{-- ✅ Tambahin pesan sukses login di sini --}}
+            @if (session('status') === 'login-success')
+                <div class="mb-4 text-green-600 font-semibold">
+                    You're logged in!
                 </div>
             @endif
+
 
 <div class="mb-6">
     <form id="filterForm" method="GET" action="{{ route('items.index') }}"
